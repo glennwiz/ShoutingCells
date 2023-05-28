@@ -11,16 +11,15 @@ class Agent
     public int destination;
     public int maxHearingDistance;
     private RectangleShape rectangle;
+    private Random random;
 
     public Agent(int numCounters, int maxHearingDistance, Vector2f position)
     {
         counters = new int[numCounters];
         this.position = position;
-        currentDirection = 1;
+        currentDirection = 0; // 0: North, 1: South, 2: East, 3: West
         destination = 0;
         this.maxHearingDistance = maxHearingDistance;
-
-        // Initialize the rectangle shape for rendering
         rectangle = new RectangleShape(new Vector2f(3, 3));
         rectangle.Position = position;
         rectangle.FillColor = new Color(
@@ -28,11 +27,39 @@ class Agent
             (byte)RandomHelper.Random.Next(256),
             (byte)RandomHelper.Random.Next(256)
         );
+        random = new Random();
     }
 
     public void TakeStep()
     {
-        position.X += currentDirection;
+        int bias = random.Next(10); // Random bias factor
+
+        // Determine the movement direction with bias
+        if (bias == 0)
+        {
+            // Go North
+            position.Y -= 1;
+            currentDirection = 0;
+        }
+        else if (bias == 1)
+        {
+            // Go South
+            position.Y += 1;
+            currentDirection = 1;
+        }
+        else if (bias >= 2 && bias <= 6)
+        {
+            // Go East
+            position.X += 1;
+            currentDirection = 2;
+        }
+        else
+        {
+            // Go West
+            position.X -= 1;
+            currentDirection = 3;
+        }
+
         for (int i = 0; i < counters.Length; i++)
         {
             counters[i]++;
@@ -63,13 +90,38 @@ class Agent
             counters[destination] = shoutingValue;
             if (shoutingAgentPosition != position)
             {
-                currentDirection = shoutingAgentPosition.X < position.X ? -1 : 1;
+                currentDirection = GetDirectionFromPosition(shoutingAgentPosition);
             }
+        }
+    }
+
+    private int GetDirectionFromPosition(Vector2f otherPosition)
+    {
+        if (otherPosition.Y < position.Y)
+        {
+            // North
+            return 0;
+        }
+        else if (otherPosition.Y > position.Y)
+        {
+            // South
+            return 1;
+        }
+        else if (otherPosition.X > position.X)
+        {
+            // East
+            return 2;
+        }
+        else
+        {
+            // West
+            return 3;
         }
     }
 
     public void Draw(RenderWindow window)
     {
+        rectangle.Position = position;
         window.Draw(rectangle);
     }
 }
@@ -123,7 +175,7 @@ class Program
             // Handle agents bumping into items or changing destinations
             foreach (Agent agent in agents)
             {
-                if ((int)agent.position.X == agent.destination * 100)
+                if (agent.position.X == agent.destination * 100)
                 {
                     agent.ChangeDestination();
                 }
@@ -150,4 +202,3 @@ class Program
         }
     }
 }
-
