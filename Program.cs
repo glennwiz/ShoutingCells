@@ -12,6 +12,8 @@ class Agent
     public int maxHearingDistance;
     private RectangleShape rectangle;
     private Random random;
+    private int energy;
+    private const int EnergyDepletionAmount = 1; // Amount of energy to deplete on each movement
 
     public Agent(int numCounters, int maxHearingDistance, Vector2f position)
     {
@@ -28,6 +30,7 @@ class Agent
             (byte)RandomHelper.Random.Next(256)
         );
         random = new Random();
+        energy = 100; // Initial energy value for each cell
     }
 
     public void TakeStep()
@@ -60,6 +63,9 @@ class Agent
             currentDirection = 3;
         }
 
+        // Deplete energy on each movement
+        energy -= EnergyDepletionAmount;
+
         for (int i = 0; i < counters.Length; i++)
         {
             counters[i]++;
@@ -80,7 +86,7 @@ class Agent
     public void Shout()
     {
         int valueToShout = counters[destination] + maxHearingDistance;
-        Console.WriteLine($"Agent {position} shouting: {valueToShout}");
+        Console.WriteLine($"Agent {position} shouting: {valueToShout} (Energy: {energy})");
     }
 
     public void Listen(Vector2f shoutingAgentPosition, int shoutingValue)
@@ -122,7 +128,17 @@ class Agent
     public void Draw(RenderWindow window)
     {
         rectangle.Position = position;
+        rectangle.FillColor = GetColorBasedOnEnergy();
         window.Draw(rectangle);
+    }
+
+    private Color GetColorBasedOnEnergy()
+    {
+    	float energyPercentage = (float)energy / 100f;
+    	byte red = (byte)(255 * (1 - energyPercentage));
+    	byte green = (byte)(255 * energyPercentage);
+    	byte blue = 0;
+    	return new Color(red, green, blue);
     }
 }
 
@@ -202,3 +218,4 @@ class Program
         }
     }
 }
+
