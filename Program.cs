@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using SFML.Graphics;
 using SFML.System;
 using SFML.Window;
 
 class Agent
 {
+    public int id; // Unique ID for each agent
     public int[] counters;
     public Vector2f position;
     public int currentDirection;
@@ -12,11 +14,17 @@ class Agent
     public int maxHearingDistance;
     private RectangleShape rectangle;
     private Random random;
+    private int movementBias; // Unique movement bias for each agent
     private int energy;
     private const int EnergyDepletionAmount = 1; // Amount of energy to deplete on each movement
+    private List<Vector2f> trail; 
 
-    public Agent(int numCounters, int maxHearingDistance, Vector2f position)
+     private static int nextId = 0; // Static variable to track the next available ID
+
+    public Agent(int numCounters, int maxHearingDistance, Vector2f position, int movementBias)
     {
+        id = nextId++; // Assign a unique ID to the agent
+        this.movementBias = movementBias; // Assign the movement bias
         counters = new int[numCounters];
         this.position = position;
         currentDirection = 0; // 0: North, 1: South, 2: East, 3: West
@@ -30,14 +38,16 @@ class Agent
             (byte)RandomHelper.Random.Next(256)
         );
         random = new Random();
-        energy = 100; // Initial energy value for each cell
+        energy = 10000; // Initial energy value for each cell
+        trail = new List<Vector2f>();
     }
 
     public void TakeStep()
-    {
-        int bias = random.Next(10); // Random bias factor
+    {   
 
-        // Determine the movement direction with bias
+        int bias = random.Next(10); // Use the existing Random instance
+
+        // Determine the movement direction based on the movement bias
         if (bias == 0)
         {
             // Go North
@@ -66,11 +76,15 @@ class Agent
         // Deplete energy on each movement
         energy -= EnergyDepletionAmount;
 
+        // Add current position to the trail
+        trail.Add(position);
+
         for (int i = 0; i < counters.Length; i++)
         {
             counters[i]++;
         }
     }
+
 
     public void BumpIntoItem(int counterIndex)
     {
@@ -86,7 +100,7 @@ class Agent
     public void Shout()
     {
         int valueToShout = counters[destination] + maxHearingDistance;
-        Console.WriteLine($"Agent {position} shouting: {valueToShout} (Energy: {energy})");
+        Console.WriteLine($"Agent: id {id} pos: {position} shouting: {valueToShout} (Energy: {energy})");
     }
 
     public void Listen(Vector2f shoutingAgentPosition, int shoutingValue)
@@ -130,15 +144,24 @@ class Agent
         rectangle.Position = position;
         rectangle.FillColor = GetColorBasedOnEnergy();
         window.Draw(rectangle);
+
+        // Draw trail
+        foreach (Vector2f trailPosition in trail)
+        {
+            RectangleShape trailRectangle = new RectangleShape(new Vector2f(1, 1));
+            trailRectangle.Position = trailPosition;
+            trailRectangle.FillColor = new Color(150, 150, 150);
+            window.Draw(trailRectangle);
+        }
     }
 
     private Color GetColorBasedOnEnergy()
     {
-    	float energyPercentage = (float)energy / 100f;
-    	byte red = (byte)(255 * (1 - energyPercentage));
-    	byte green = (byte)(255 * energyPercentage);
-    	byte blue = 0;
-    	return new Color(red, green, blue);
+        float energyPercentage = (float)energy / 100f;
+        byte red = (byte)(255 * (1 - energyPercentage));
+        byte green = (byte)(255 * energyPercentage);
+        byte blue = 0;
+        return new Color(red, green, blue);
     }
 }
 
@@ -152,7 +175,7 @@ class Program
     static void Main(string[] args)
     {
         // Define the number of agents and their parameters
-        int numAgents = 5;
+        int numAgents = 50;
         int numCounters = 3;
         int maxHearingDistance = 5;
 
@@ -164,7 +187,7 @@ class Program
                 RandomHelper.Random.Next(800),
                 RandomHelper.Random.Next(600)
             );
-            agents[i] = new Agent(numCounters, maxHearingDistance, position);
+            agents[i] = new Agent(numCounters, maxHearingDistance, position,3);
         }
 
         // Set up SFML window
