@@ -6,147 +6,167 @@ using SFML.Window;
 
 class Agent
 {
-    public int id; // Unique ID for each agent
-    public int[] counters;
-    public Vector2f position;
-    public int currentDirection;
-    public int destination;
-    public int maxHearingDistance;
-    private RectangleShape rectangle;
-    private Random random;
-    private int movementBias; // Unique movement bias for each agent
-    private int energy;
-    private const int EnergyDepletionAmount = 1; // Amount of energy to deplete on each movement
-    private List<Vector2f> trail; 
+    public int Id { get; }
+    public int[] Counters { get; }
+    public Vector2f Position { get; set; }
+    public int CurrentDirection { get; private set; }
+    public int Destination { get; private set; }
+    public int MaxHearingDistance { get; }
+    public List<Vector2f> Trail { get; }
 
-     private static int nextId = 0; // Static variable to track the next available ID
+    private readonly RectangleShape rectangle;
+    private readonly Random random;
+    private int movementBias;
+    private int energy;
+
+    private const int EnergyDepletionAmount = 1;
+    private static int nextId = 0;
 
     public Agent(int numCounters, int maxHearingDistance, Vector2f position, int movementBias)
     {
-        id = nextId++; // Assign a unique ID to the agent
-        this.movementBias = movementBias; // Assign the movement bias
-        counters = new int[numCounters];
-        this.position = position;
-        currentDirection = 0; // 0: North, 1: South, 2: East, 3: West
-        destination = 0;
-        this.maxHearingDistance = maxHearingDistance;
+        Id = nextId++;
+        this.movementBias = movementBias;
+        Counters = new int[numCounters];
+        Position = position;
+        CurrentDirection = 0;
+        Destination = 0;
+        MaxHearingDistance = maxHearingDistance;
         rectangle = new RectangleShape(new Vector2f(3, 3));
         rectangle.Position = position;
-        rectangle.FillColor = new Color(
-            (byte)RandomHelper.Random.Next(256),
-            (byte)RandomHelper.Random.Next(256),
-            (byte)RandomHelper.Random.Next(256)
-        );
+        rectangle.FillColor = GetRandomColor();
         random = new Random();
-        energy = 10000; // Initial energy value for each cell
-        trail = new List<Vector2f>();
+        energy = 10000;
+        Trail = new List<Vector2f>();
     }
 
     public void TakeStep()
-    {   
+    {
+        int bias = random.Next(10);
 
-        int bias = random.Next(10); // Use the existing Random instance
+        UpdatePositionAndDirection(bias);
+        DepleteEnergy();
+        AddPositionToTrail();
+        UpdateCounters();
+    }
 
-        // Determine the movement direction based on the movement bias
+    private void UpdatePositionAndDirection(int bias)
+    {
         if (bias == 0)
         {
-            // Go North
-            position.Y -= 1;
-            currentDirection = 0;
+            MoveNorth();
         }
         else if (bias == 1)
         {
-            // Go South
-            position.Y += 1;
-            currentDirection = 1;
+            MoveSouth();
         }
         else if (bias >= 2 && bias <= 6)
         {
-            // Go East
-            position.X += 1;
-            currentDirection = 2;
+            MoveEast();
         }
         else
         {
-            // Go West
-            position.X -= 1;
-            currentDirection = 3;
-        }
-
-        // Deplete energy on each movement
-        energy -= EnergyDepletionAmount;
-
-        // Add current position to the trail
-        trail.Add(position);
-
-        for (int i = 0; i < counters.Length; i++)
-        {
-            counters[i]++;
+            MoveWest();
         }
     }
 
+    private void MoveNorth()
+    {
+        Position = new Vector2f(Position.X, Position.Y - 1);
+        CurrentDirection = 0;
+    }
+
+    private void MoveSouth()
+    {
+        Position = new Vector2f(Position.X, Position.Y + 1);
+        CurrentDirection = 1;
+    }
+
+    private void MoveEast()
+    {
+        Position = new Vector2f(Position.X + 1, Position.Y);
+        CurrentDirection = 2;
+    }
+
+    private void MoveWest()
+    {
+        Position = new Vector2f(Position.X - 1, Position.Y);
+        CurrentDirection = 3;
+    }
+
+    private void DepleteEnergy()
+    {
+        energy -= EnergyDepletionAmount;
+    }
+
+    private void AddPositionToTrail()
+    {
+        Trail.Add(Position);
+    }
+
+    private void UpdateCounters()
+    {
+        for (int i = 0; i < Counters.Length; i++)
+        {
+            Counters[i]++;
+        }
+    }
 
     public void BumpIntoItem(int counterIndex)
     {
-        counters[counterIndex] = 0;
+        Counters[counterIndex] = 0;
     }
 
     public void ChangeDestination()
     {
-        currentDirection *= -1;
-        destination = (destination + 1) % counters.Length;
+        CurrentDirection *= -1;
+        Destination = (Destination + 1) % Counters.Length;
     }
 
     public void Shout()
     {
-        int valueToShout = counters[destination] + maxHearingDistance;
-        Console.WriteLine($"Agent: id {id} pos: {position} shouting: {valueToShout} (Energy: {energy})");
+        int valueToShout = Counters[Destination] + MaxHearingDistance;
+        Console.WriteLine($"Agent: id {Id} pos: {Position} shouting: {valueToShout} (Energy: {energy})");
     }
 
     public void Listen(Vector2f shoutingAgentPosition, int shoutingValue)
     {
-        if (shoutingValue < counters[destination])
+        if (shoutingValue < Counters[Destination])
         {
-            counters[destination] = shoutingValue;
-            if (shoutingAgentPosition != position)
+            Counters[Destination] = shoutingValue;
+            if (shoutingAgentPosition != Position)
             {
-                currentDirection = GetDirectionFromPosition(shoutingAgentPosition);
+                CurrentDirection = GetDirectionFromPosition(shoutingAgentPosition);
             }
         }
     }
 
     private int GetDirectionFromPosition(Vector2f otherPosition)
     {
-        if (otherPosition.Y < position.Y)
+        if (otherPosition.Y < Position.Y)
         {
-            // North
-            return 0;
+            return 0; // North
         }
-        else if (otherPosition.Y > position.Y)
+        else if (otherPosition.Y > Position.Y)
         {
-            // South
-            return 1;
+            return 1; // South
         }
-        else if (otherPosition.X > position.X)
+        else if (otherPosition.X > Position.X)
         {
-            // East
-            return 2;
+            return 2; // East
         }
         else
         {
-            // West
-            return 3;
+            return 3; // West
         }
     }
 
     public void Draw(RenderWindow window)
     {
-        rectangle.Position = position;
+        rectangle.Position = Position;
         rectangle.FillColor = GetColorBasedOnEnergy();
         window.Draw(rectangle);
 
-        // Draw trail
-        foreach (Vector2f trailPosition in trail)
+        foreach (Vector2f trailPosition in Trail)
         {
             RectangleShape trailRectangle = new RectangleShape(new Vector2f(1, 1));
             trailRectangle.Position = trailPosition;
@@ -163,6 +183,15 @@ class Agent
         byte blue = 0;
         return new Color(red, green, blue);
     }
+
+    private Color GetRandomColor()
+    {
+        return new Color(
+            (byte)RandomHelper.Random.Next(256),
+            (byte)RandomHelper.Random.Next(256),
+            (byte)RandomHelper.Random.Next(256)
+        );
+    }
 }
 
 static class RandomHelper
@@ -170,16 +199,14 @@ static class RandomHelper
     public static Random Random { get; } = new Random();
 }
 
-class Program
+static class Program
 {
     static void Main(string[] args)
     {
-        // Define the number of agents and their parameters
         int numAgents = 50;
         int numCounters = 3;
         int maxHearingDistance = 5;
 
-        // Create the agents with random positions
         Agent[] agents = new Agent[numAgents];
         for (int i = 0; i < numAgents; i++)
         {
@@ -187,23 +214,17 @@ class Program
                 RandomHelper.Random.Next(800),
                 RandomHelper.Random.Next(600)
             );
-            agents[i] = new Agent(numCounters, maxHearingDistance, position,3);
+            agents[i] = new Agent(numCounters, maxHearingDistance, position, 3);
         }
 
-        // Set up SFML window
         RenderWindow window = new RenderWindow(new VideoMode(800, 600), "SFML Window");
         window.SetFramerateLimit(60);
 
-        // Main loop
         while (window.IsOpen)
         {
-            // Handle window events
             window.DispatchEvents();
-
-            // Clear the window
             window.Clear(Color.White);
 
-            // Simulate the behavior of the agents
             foreach (Agent agent in agents)
             {
                 agent.TakeStep();
@@ -211,34 +232,39 @@ class Program
                 agent.Draw(window);
             }
 
-            // Handle agents bumping into items or changing destinations
-            foreach (Agent agent in agents)
-            {
-                if (agent.position.X == agent.destination * 100)
-                {
-                    agent.ChangeDestination();
-                }
-                else if ((int)agent.position.X % 200 == 0)
-                {
-                    agent.BumpIntoItem((int)agent.position.X / 200 % numCounters);
-                }
-            }
+            HandleBumpingIntoItemsAndDestinationChange(agents, numCounters);
+            ListenToShoutsAndUpdateCounters(agents, maxHearingDistance);
 
-            // Listen to shouts and update counters accordingly
-            foreach (Agent agent in agents)
-            {
-                foreach (Agent otherAgent in agents)
-                {
-                    if (otherAgent != agent && Math.Abs(otherAgent.position.X - agent.position.X) <= maxHearingDistance * 100)
-                    {
-                        agent.Listen(otherAgent.position, otherAgent.counters[agent.destination]);
-                    }
-                }
-            }
-
-            // Display the window
             window.Display();
         }
     }
-}
 
+    private static void HandleBumpingIntoItemsAndDestinationChange(Agent[] agents, int numCounters)
+    {
+        foreach (Agent agent in agents)
+        {
+            if (agent.Position.X == agent.Destination * 100)
+            {
+                agent.ChangeDestination();
+            }
+            else if ((int)agent.Position.X % 200 == 0)
+            {
+                agent.BumpIntoItem((int)agent.Position.X / 200 % numCounters);
+            }
+        }
+    }
+
+    private static void ListenToShoutsAndUpdateCounters(Agent[] agents, int maxHearingDistance)
+    {
+        foreach (Agent agent in agents)
+        {
+            foreach (Agent otherAgent in agents)
+            {
+                if (otherAgent != agent && Math.Abs(otherAgent.Position.X - agent.Position.X) <= maxHearingDistance * 100)
+                {
+                    agent.Listen(otherAgent.Position, otherAgent.Counters[agent.Destination]);
+                }
+            }
+        }
+    }
+}
