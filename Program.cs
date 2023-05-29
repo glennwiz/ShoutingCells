@@ -46,6 +46,7 @@ static class Program
             window.Display();
         }
     }
+    
 
     private static void HandleBumpingIntoItemsAndDestinationChange(List<Agent> agents, int numCounters)
     {
@@ -71,6 +72,9 @@ static class Program
                 if (otherAgent != agent && Math.Abs(otherAgent.Position.X - agent.Position.X) <= maxHearingDistance * 100)
                 {
                     agent.Listen(otherAgent.Position, otherAgent.Counters[agent.Destination]);
+                    
+                    // Change direction towards the shouting agent
+                    agent.CurrentDirection = agent.GetDirectionFromPosition(otherAgent.Position);
                 }
             }
         }
@@ -81,6 +85,7 @@ class FoodItem
 {
     public Vector2f Position { get; set; }
     public Vector2f Size { get; set; }
+    public int energy { get; set; }
     public Color Color { get; set; }
 
     public FoodItem(Vector2f position, Vector2f size, Color color)
@@ -88,6 +93,7 @@ class FoodItem
         Position = position;
         Size = size;
         Color = color;
+        energy = 10000;
     }
 
     public void Draw(RenderWindow window)
@@ -97,15 +103,19 @@ class FoodItem
         rectangle.FillColor = Color;
         window.Draw(rectangle);
     }
-}
 
+    internal void RemoveEnery(int v)
+    {
+        energy -= v;
+    }
+}
 
 class Agent
 {
     public int Id { get; }
     public int[] Counters { get; }
     public Vector2f Position { get; set; }
-    public int CurrentDirection { get; private set; }
+    public int CurrentDirection { get; set; }
     public int Destination { get; private set; }
     public int MaxHearingDistance { get; }
     public List<Vector2f> Trail { get; }
@@ -118,6 +128,8 @@ class Agent
     private const int EnergyDepletionAmount = 1;
     private static int nextId = 0;
     private int stepper = 0;
+    private const int ReproductionThreshold = 30; // 30% energy threshold for reproduction
+    private bool isCallingForMating = false;
 
     public Agent(int numCounters, int maxHearingDistance, Vector2f position, int movementBias)
     {
@@ -133,7 +145,7 @@ class Agent
         rectangle.FillColor = GetRandomColor();
         random = new Random();
         energy = random.Next(1000);
-        Trail = new List<Vector2f>();
+        Trail = new List<Vector2f>();        
     }    
 
     public void TakeStep()
@@ -144,7 +156,26 @@ class Agent
         UpdatePositionAndDirection(bias);
         DepleteEnergy();
         AddPositionToTrail();
-        UpdateCounters();
+        UpdateCounters(); 
+        
+        // Check if agent has bumped into food item
+        FoodItem foodItem = Program.foodItems.Find(item => item.Position == Position);
+        if (foodItem != null)
+        {
+            Shout(); // If agent has bumped into food item, it will shout.
+            foodItem.RemoveEnery(10); // Remove energy from food item.
+        }
+
+        if (energy * 100 / random.Next(1, 1001) <= ReproductionThreshold && !isCallingForMating)  // random.Next(1000) is your initial random energy
+        {
+            MatingCall();
+        }
+    }
+
+    public void MatingCall()
+    {
+        isCallingForMating = true;
+        Console.WriteLine($"Agent: id {Id} pos: {Position} is calling for mating (Energy: {energy})");
     }
 
     private void UpdatePositionAndDirection(int bias)
@@ -287,7 +318,7 @@ class Agent
         }
     }
 
-    private int GetDirectionFromPosition(Vector2f otherPosition)
+    public int GetDirectionFromPosition(Vector2f otherPosition)
     {
         if (otherPosition.Y < Position.Y)
         {

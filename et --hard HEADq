@@ -1,0 +1,288 @@
+[1mdiff --cc Program.cs[m
+[1mindex 13afeb6,5bdd915..0000000[m
+[1m--- a/Program.cs[m
+[1m+++ b/Program.cs[m
+[36m@@@ -117,7 -21,6 +117,10 @@@[m [mclass Agen[m
+  [m
+      private const int EnergyDepletionAmount = 1;[m
+      private static int nextId = 0;[m
+[32m++<<<<<<< HEAD[m
+[32m +    private int stepper = 0;[m
+[32m++=======[m
+[32m++>>>>>>> f93cb22c626e68e284a8b36f3fa7cbbf2cb3ba35[m
+  [m
+      public Agent(int numCounters, int maxHearingDistance, Vector2f position, int movementBias)[m
+      {[m
+[36m@@@ -132,14 -35,13 +135,24 @@@[m
+          rectangle.Position = position;[m
+          rectangle.FillColor = GetRandomColor();[m
+          random = new Random();[m
+[32m++<<<<<<< HEAD[m
+[32m +        energy = random.Next(1000);[m
+[32m +        Trail = new List<Vector2f>();[m
+[32m +    }    [m
+[32m +[m
+[32m +    public void TakeStep()[m
+[32m +    {[m
+[32m +        stepper++;[m
+[32m +        int bias = this.movementBias;[m
+[32m++=======[m
+[32m+         energy = 10000;[m
+[32m+         Trail = new List<Vector2f>();[m
+[32m+     }[m
+[32m+ [m
+[32m+     public void TakeStep()[m
+[32m+     {[m
+[32m+         int bias = random.Next(10);[m
+[32m++>>>>>>> f93cb22c626e68e284a8b36f3fa7cbbf2cb3ba35[m
+  [m
+          UpdatePositionAndDirection(bias);[m
+          DepleteEnergy();[m
+[36m@@@ -149,93 -51,51 +162,135 @@@[m
+  [m
+      private void UpdatePositionAndDirection(int bias)[m
+      {[m
+[32m++<<<<<<< HEAD[m
+[32m +        if (random.NextDouble() < 0.3)[m
+[32m +        {[m
+[32m +            // 30% of the time, use the provided bias.[m
+[32m +            switch(bias)[m
+[32m +            {[m
+[32m +                case 0:[m
+[32m +                    MoveNorth();[m
+[32m +                    break;[m
+[32m +                case 1:[m
+[32m +                    MoveSouth();[m
+[32m +                    break;[m
+[32m +                case 2:[m
+[32m +                    MoveEast();[m
+[32m +                    break;[m
+[32m +                case 3:[m
+[32m +                    MoveWest();[m
+[32m +                    break;[m
+[32m +            }[m
+[32m +        }[m
+[32m +        else[m
+[32m +        {[m
+[32m +            // 70% of the time, choose a direction at random.[m
+[32m +            switch(random.Next(4))  // Generates a random integer between 0 and 3.[m
+[32m +            {[m
+[32m +                case 0:[m
+[32m +                    MoveNorth();[m
+[32m +                    break;[m
+[32m +                case 1:[m
+[32m +                    MoveSouth();[m
+[32m +                    break;[m
+[32m +                case 2:[m
+[32m +                    MoveEast();[m
+[32m +                    break;[m
+[32m +                case 3:[m
+[32m +                    MoveWest();[m
+[32m +                    break;[m
+[32m +            }[m
+[32m +        }[m
+[32m +    }[m
+[32m +[m
+[32m +    private const int GridWidth = 800;[m
+[32m +    private const int GridHeight = 600;[m
+[32m +[m
+[32m +    private void MoveNorth()[m
+[32m +    {[m
+[32m +        Position = new Vector2f(Position.X, (Position.Y - 1 + GridHeight) % GridHeight);[m
+[32m++=======[m
+[32m+         if (bias == 0)[m
+[32m+         {[m
+[32m+             MoveNorth();[m
+[32m+         }[m
+[32m+         else if (bias == 1)[m
+[32m+         {[m
+[32m+             MoveSouth();[m
+[32m+         }[m
+[32m+         else if (bias >= 2 && bias <= 6)[m
+[32m+         {[m
+[32m+             MoveEast();[m
+[32m+         }[m
+[32m+         else[m
+[32m+         {[m
+[32m+             MoveWest();[m
+[32m+         }[m
+[32m+     }[m
+[32m+ [m
+[32m+     private void MoveNorth()[m
+[32m+     {[m
+[32m+         Position = new Vector2f(Position.X, Position.Y - 1);[m
+[32m++>>>>>>> f93cb22c626e68e284a8b36f3fa7cbbf2cb3ba35[m
+          CurrentDirection = 0;[m
+      }[m
+  [m
+      private void MoveSouth()[m
+      {[m
+[32m++<<<<<<< HEAD[m
+[32m +        Position = new Vector2f(Position.X, (Position.Y + 1) % GridHeight);[m
+[32m++=======[m
+[32m+         Position = new Vector2f(Position.X, Position.Y + 1);[m
+[32m++>>>>>>> f93cb22c626e68e284a8b36f3fa7cbbf2cb3ba35[m
+          CurrentDirection = 1;[m
+      }[m
+  [m
+      private void MoveEast()[m
+      {[m
+[32m++<<<<<<< HEAD[m
+[32m +        Position = new Vector2f((Position.X + 1) % GridWidth, Position.Y);[m
+[32m++=======[m
+[32m+         Position = new Vector2f(Position.X + 1, Position.Y);[m
+[32m++>>>>>>> f93cb22c626e68e284a8b36f3fa7cbbf2cb3ba35[m
+          CurrentDirection = 2;[m
+      }[m
+  [m
+      private void MoveWest()[m
+      {[m
+[32m++<<<<<<< HEAD[m
+[32m +        Position = new Vector2f((Position.X - 1 + GridWidth) % GridWidth, Position.Y);[m
+[32m +        CurrentDirection = 3;[m
+[32m +    }[m
+[32m +[m
+[32m +[m
+[32m +    private void DepleteEnergy()[m
+[32m +    {[m
+[32m +        energy -= EnergyDepletionAmount;[m
+[32m +[m
+[32m +        // Check if energy has depleted.[m
+[32m +        if (energy <= 0)[m
+[32m +        {[m
+[32m +            Die();[m
+[32m +        }[m
+[32m +    }[m
+[32m +[m
+[32m +    public void Die()[m
+[32m +    {[m
+[32m +        // Drop food item at current position[m
+[32m +        // The food item will be 10x10 in size and blue in color.[m
+[32m +        Program.foodItems.Add(new FoodItem(Position, new Vector2f(10, 10), Color.Blue));[m
+[32m +[m
+[32m +        // Remove this agent instance from the list of agents.[m
+[32m +        //Program.agents.Remove(this);[m
+[32m++=======[m
+[32m+         Position = new Vector2f(Position.X - 1, Position.Y);[m
+[32m+         CurrentDirection = 3;[m
+[32m+     }[m
+[32m+ [m
+[32m+     private void DepleteEnergy()[m
+[32m+     {[m
+[32m+         energy -= EnergyDepletionAmount;[m
+[32m++>>>>>>> f93cb22c626e68e284a8b36f3fa7cbbf2cb3ba35[m
+      }[m
+  [m
+      private void AddPositionToTrail()[m
+[36m@@@ -253,10 -113,7 +308,14 @@@[m
+  [m
+      public void BumpIntoItem(int counterIndex)[m
+      {[m
+[32m++<<<<<<< HEAD[m
+[32m +        if (counterIndex >= 0 && counterIndex < Counters.Length)[m
+[32m +        {[m
+[32m +            Counters[counterIndex] = 0;[m
+[32m +        }[m
+[32m++=======[m
+[32m+         Counters[counterIndex] = 0;[m
+[32m++>>>>>>> f93cb22c626e68e284a8b36f3fa7cbbf2cb3ba35[m
+      }[m
+  [m
+      public void ChangeDestination()[m
+[36m@@@ -266,13 -123,9 +325,19 @@@[m
+      }[m
+  [m
+      public void Shout()[m
+[32m++<<<<<<< HEAD[m
+[32m +    {            [m
+[32m +        if(stepper % 100 == 0)[m
+[32m +        {[m
+[32m +            int valueToShout = Counters[Destination] + MaxHearingDistance;[m
+[32m +            Console.WriteLine($"Agent: id {Id} pos: {Position} shouting: {valueToShout} (Energy: {energy})");[m
+[32m +        }[m
+[32m +        [m
+[32m++=======[m
+[32m+     {[m
+[32m+         int valueToShout = Counters[Destination] + MaxHearingDistance;[m
+[32m+         Console.WriteLine($"Agent: id {Id} pos: {Position} shouting: {valueToShout} (Energy: {energy})");[m
+[32m++>>>>>>> f93cb22c626e68e284a8b36f3fa7cbbf2cb3ba35[m
+      }[m
+  [m
+      public void Listen(Vector2f shoutingAgentPosition, int shoutingValue)[m
+[36m@@@ -345,3 -198,73 +410,76 @@@[m [mstatic class RandomHelpe[m
+  {[m
+      public static Random Random { get; } = new Random();[m
+  }[m
+[32m++<<<<<<< HEAD[m
+[32m++=======[m
+[32m+ [m
+[32m+ static class Program[m
+[32m+ {[m
+[32m+     static void Main(string[] args)[m
+[32m+     {[m
+[32m+         int numAgents = 50;[m
+[32m+         int numCounters = 3;[m
+[32m+         int maxHearingDistance = 5;[m
+[32m+ [m
+[32m+         Agent[] agents = new Agent[numAgents];[m
+[32m+         for (int i = 0; i < numAgents; i++)[m
+[32m+         {[m
+[32m+             Vector2f position = new Vector2f([m
+[32m+                 RandomHelper.Random.Next(800),[m
+[32m+                 RandomHelper.Random.Next(600)[m
+[32m+             );[m
+[32m+             agents[i] = new Agent(numCounters, maxHearingDistance, position, 3);[m
+[32m+         }[m
+[32m+ [m
+[32m+         RenderWindow window = new RenderWindow(new VideoMode(800, 600), "SFML Window");[m
+[32m+         window.SetFramerateLimit(60);[m
+[32m+ [m
+[32m+         while (window.IsOpen)[m
+[32m+         {[m
+[32m+             window.DispatchEvents();[m
+[32m+             window.Clear(Color.White);[m
+[32m+ [m
+[32m+             foreach (Agent agent in agents)[m
+[32m+             {[m
+[32m+                 agent.TakeStep();[m
+[32m+                 agent.Shout();[m
+[32m+                 agent.Draw(window);[m
+[32m+             }[m
+[32m+ [m
+[32m+             HandleBumpingIntoItemsAndDestinationChange(agents, numCounters);[m
+[32m+             ListenToShoutsAndUpdateCounters(agents, maxHearingDistance);[m
+[32m+ [m
+[32m+             window.Display();[m
+[32m+         }[m
+[32m+     }[m
+[32m+ [m
+[32m+     private static void HandleBumpingIntoItemsAndDestinationChange(Agent[] agents, int numCounters)[m
+[32m+     {[m
+[32m+         foreach (Agent agent in agents)[m
+[32m+         {[m
+[32m+             if (agent.Position.X == agent.Destination * 100)[m
+[32m+             {[m
+[32m+                 agent.ChangeDestination();[m
+[32m+             }[m
+[32m+             else if ((int)agent.Position.X % 200 == 0)[m
+[32m+             {[m
+[32m+                 agent.BumpIntoItem((int)agent.Position.X / 200 % numCounters);[m
+[32m+             }[m
+[32m+         }[m
+[32m+     }[m
+[32m+ [m
+[32m+     private static void ListenToShoutsAndUpdateCounters(Agent[] agents, int maxHearingDistance)[m
+[32m+     {[m
+[32m+         foreach (Agent agent in agents)[m
+[32m+         {[m
+[32m+             foreach (Agent otherAgent in agents)[m
+[32m+             {[m
+[32m+                 if (otherAgent != agent && Math.Abs(otherAgent.Position.X - agent.Position.X) <= maxHearingDistance * 100)[m
+[32m+                 {[m
+[32m+                     agent.Listen(otherAgent.Position, otherAgent.Counters[agent.Destination]);[m
+[32m+                 }[m
+[32m+             }[m
+[32m+         }[m
+[32m+     }[m
+[32m+ }[m
+[32m++>>>>>>> f93cb22c626e68e284a8b36f3fa7cbbf2cb3ba35[m
