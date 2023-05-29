@@ -1,8 +1,104 @@
-﻿using System;
-using System.Collections.Generic;
-using SFML.Graphics;
+﻿using SFML.Graphics;
 using SFML.System;
 using SFML.Window;
+
+static class Program
+{    public static List<Agent> agents = new List<Agent>();
+    public static List<FoodItem> foodItems = new List<FoodItem>();
+    static void Main(string[] args)
+    {
+        int numAgents = 5;
+        int numCounters = 3;
+        int maxHearingDistance = 5;
+       
+        for (int i = 0; i < numAgents; i++)
+        {
+            Vector2f position = new Vector2f(
+                RandomHelper.Random.Next(800),
+                RandomHelper.Random.Next(600)
+            );
+            agents.Add(new Agent(numCounters, maxHearingDistance, position, 3));
+        }
+
+        RenderWindow window = new RenderWindow(new VideoMode(800, 600), "SFML Window");
+        window.SetFramerateLimit(60);
+
+        while (window.IsOpen)
+        {
+            window.DispatchEvents();
+            window.Clear(Color.White);
+
+            foreach (Agent agent in agents)
+            {
+                agent.TakeStep();
+                agent.Shout();
+                agent.Draw(window);
+            }
+
+            foreach (FoodItem foodItem in foodItems)
+            {
+                foodItem.Draw(window);
+            }
+
+            HandleBumpingIntoItemsAndDestinationChange(agents, numCounters);
+            ListenToShoutsAndUpdateCounters(agents, maxHearingDistance);
+
+            window.Display();
+        }
+    }
+
+    private static void HandleBumpingIntoItemsAndDestinationChange(List<Agent> agents, int numCounters)
+    {
+        foreach (Agent agent in agents)
+        {
+            if (agent.Position.X == agent.Destination * 100)
+            {
+                agent.ChangeDestination();
+            }
+            else if ((int)agent.Position.X % 200 == 0)
+            {
+                agent.BumpIntoItem((int)agent.Position.X / 200 % numCounters);
+            }
+        }
+    }
+
+    private static void ListenToShoutsAndUpdateCounters(List<Agent> agents, int maxHearingDistance)
+    {
+        foreach (Agent agent in agents)
+        {
+            foreach (Agent otherAgent in agents)
+            {
+                if (otherAgent != agent && Math.Abs(otherAgent.Position.X - agent.Position.X) <= maxHearingDistance * 100)
+                {
+                    agent.Listen(otherAgent.Position, otherAgent.Counters[agent.Destination]);
+                }
+            }
+        }
+    }
+}
+
+class FoodItem
+{
+    public Vector2f Position { get; set; }
+    public Vector2f Size { get; set; }
+    public Color Color { get; set; }
+
+    public FoodItem(Vector2f position, Vector2f size, Color color)
+    {
+        Position = position;
+        Size = size;
+        Color = color;
+    }
+
+    public void Draw(RenderWindow window)
+    {
+        RectangleShape rectangle = new RectangleShape(Size);
+        rectangle.Position = Position;
+        rectangle.FillColor = Color;
+        window.Draw(rectangle);
+    }
+}
+
 
 class Agent
 {
@@ -21,6 +117,7 @@ class Agent
 
     private const int EnergyDepletionAmount = 1;
     private static int nextId = 0;
+    private int stepper = 0;
 
     public Agent(int numCounters, int maxHearingDistance, Vector2f position, int movementBias)
     {
@@ -35,13 +132,14 @@ class Agent
         rectangle.Position = position;
         rectangle.FillColor = GetRandomColor();
         random = new Random();
-        energy = 10000;
+        energy = random.Next(1000);
         Trail = new List<Vector2f>();
-    }
+    }    
 
     public void TakeStep()
     {
-        int bias = random.Next(10);
+        stepper++;
+        int bias = this.movementBias;
 
         UpdatePositionAndDirection(bias);
         DepleteEnergy();
@@ -51,51 +149,93 @@ class Agent
 
     private void UpdatePositionAndDirection(int bias)
     {
-        if (bias == 0)
+        if (random.NextDouble() < 0.3)
         {
-            MoveNorth();
-        }
-        else if (bias == 1)
-        {
-            MoveSouth();
-        }
-        else if (bias >= 2 && bias <= 6)
-        {
-            MoveEast();
+            // 30% of the time, use the provided bias.
+            switch(bias)
+            {
+                case 0:
+                    MoveNorth();
+                    break;
+                case 1:
+                    MoveSouth();
+                    break;
+                case 2:
+                    MoveEast();
+                    break;
+                case 3:
+                    MoveWest();
+                    break;
+            }
         }
         else
         {
-            MoveWest();
+            // 70% of the time, choose a direction at random.
+            switch(random.Next(4))  // Generates a random integer between 0 and 3.
+            {
+                case 0:
+                    MoveNorth();
+                    break;
+                case 1:
+                    MoveSouth();
+                    break;
+                case 2:
+                    MoveEast();
+                    break;
+                case 3:
+                    MoveWest();
+                    break;
+            }
         }
     }
 
+    private const int GridWidth = 800;
+    private const int GridHeight = 600;
+
     private void MoveNorth()
     {
-        Position = new Vector2f(Position.X, Position.Y - 1);
+        Position = new Vector2f(Position.X, (Position.Y - 1 + GridHeight) % GridHeight);
         CurrentDirection = 0;
     }
 
     private void MoveSouth()
     {
-        Position = new Vector2f(Position.X, Position.Y + 1);
+        Position = new Vector2f(Position.X, (Position.Y + 1) % GridHeight);
         CurrentDirection = 1;
     }
 
     private void MoveEast()
     {
-        Position = new Vector2f(Position.X + 1, Position.Y);
+        Position = new Vector2f((Position.X + 1) % GridWidth, Position.Y);
         CurrentDirection = 2;
     }
 
     private void MoveWest()
     {
-        Position = new Vector2f(Position.X - 1, Position.Y);
+        Position = new Vector2f((Position.X - 1 + GridWidth) % GridWidth, Position.Y);
         CurrentDirection = 3;
     }
+
 
     private void DepleteEnergy()
     {
         energy -= EnergyDepletionAmount;
+
+        // Check if energy has depleted.
+        if (energy <= 0)
+        {
+            Die();
+        }
+    }
+
+    public void Die()
+    {
+        // Drop food item at current position
+        // The food item will be 10x10 in size and blue in color.
+        Program.foodItems.Add(new FoodItem(Position, new Vector2f(10, 10), Color.Blue));
+
+        // Remove this agent instance from the list of agents.
+        //Program.agents.Remove(this);
     }
 
     private void AddPositionToTrail()
@@ -113,7 +253,10 @@ class Agent
 
     public void BumpIntoItem(int counterIndex)
     {
-        Counters[counterIndex] = 0;
+        if (counterIndex >= 0 && counterIndex < Counters.Length)
+        {
+            Counters[counterIndex] = 0;
+        }
     }
 
     public void ChangeDestination()
@@ -123,9 +266,13 @@ class Agent
     }
 
     public void Shout()
-    {
-        int valueToShout = Counters[Destination] + MaxHearingDistance;
-        Console.WriteLine($"Agent: id {Id} pos: {Position} shouting: {valueToShout} (Energy: {energy})");
+    {            
+        if(stepper % 100 == 0)
+        {
+            int valueToShout = Counters[Destination] + MaxHearingDistance;
+            Console.WriteLine($"Agent: id {Id} pos: {Position} shouting: {valueToShout} (Energy: {energy})");
+        }
+        
     }
 
     public void Listen(Vector2f shoutingAgentPosition, int shoutingValue)
@@ -197,74 +344,4 @@ class Agent
 static class RandomHelper
 {
     public static Random Random { get; } = new Random();
-}
-
-static class Program
-{
-    static void Main(string[] args)
-    {
-        int numAgents = 50;
-        int numCounters = 3;
-        int maxHearingDistance = 5;
-
-        Agent[] agents = new Agent[numAgents];
-        for (int i = 0; i < numAgents; i++)
-        {
-            Vector2f position = new Vector2f(
-                RandomHelper.Random.Next(800),
-                RandomHelper.Random.Next(600)
-            );
-            agents[i] = new Agent(numCounters, maxHearingDistance, position, 3);
-        }
-
-        RenderWindow window = new RenderWindow(new VideoMode(800, 600), "SFML Window");
-        window.SetFramerateLimit(60);
-
-        while (window.IsOpen)
-        {
-            window.DispatchEvents();
-            window.Clear(Color.White);
-
-            foreach (Agent agent in agents)
-            {
-                agent.TakeStep();
-                agent.Shout();
-                agent.Draw(window);
-            }
-
-            HandleBumpingIntoItemsAndDestinationChange(agents, numCounters);
-            ListenToShoutsAndUpdateCounters(agents, maxHearingDistance);
-
-            window.Display();
-        }
-    }
-
-    private static void HandleBumpingIntoItemsAndDestinationChange(Agent[] agents, int numCounters)
-    {
-        foreach (Agent agent in agents)
-        {
-            if (agent.Position.X == agent.Destination * 100)
-            {
-                agent.ChangeDestination();
-            }
-            else if ((int)agent.Position.X % 200 == 0)
-            {
-                agent.BumpIntoItem((int)agent.Position.X / 200 % numCounters);
-            }
-        }
-    }
-
-    private static void ListenToShoutsAndUpdateCounters(Agent[] agents, int maxHearingDistance)
-    {
-        foreach (Agent agent in agents)
-        {
-            foreach (Agent otherAgent in agents)
-            {
-                if (otherAgent != agent && Math.Abs(otherAgent.Position.X - agent.Position.X) <= maxHearingDistance * 100)
-                {
-                    agent.Listen(otherAgent.Position, otherAgent.Counters[agent.Destination]);
-                }
-            }
-        }
-    }
 }
